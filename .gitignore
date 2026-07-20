@@ -1,0 +1,13 @@
+# Terraform state (can contain secrets in plain text)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Your actual variable values (account IDs, usernames) - keep local only
+terraform.tfvars
+*.auto.tfvars
+
+# Private key - never commit this
+*.pem
+snf_key*
