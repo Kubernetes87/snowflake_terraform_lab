@@ -12,4 +12,5 @@ provider "snowflake" {
   user                   = var.user 
   authenticator          = "SNOWFLAKE_JWT"
   private_key            = file(pathexpand(var.private_key_path))
+  private_key_passphrase = var.private_key_passphrase
 }
