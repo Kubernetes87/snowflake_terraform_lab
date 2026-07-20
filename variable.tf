@@ -21,3 +21,9 @@ variable "private_key_path" {
   description = "Path to the Snowflake private key (PKCS#8 format)"
   sensitive   = true
 }
+
+
+variable "private_key_passphrase" {
+  type      = string
+  sensitive = true
+}
