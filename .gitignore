@@ -3,6 +3,8 @@
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+*.tfplan
+tfplan
 
 # Your actual variable values (account IDs, usernames) - keep local only
 terraform.tfvars

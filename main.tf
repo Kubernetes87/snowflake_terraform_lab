@@ -10,6 +10,31 @@ resource "snowflake_warehouse" "warehouse" {
   initially_suspended                 = true
   comment                             = "terraform WH."
   max_concurrency_level               = 4
-  statement_queued_timeout_in_seconds = 5
+  statement_queued_timeout_in_seconds = 500
   statement_timeout_in_seconds        = 3600
+}
+
+## Complete (with every optional set)
+resource "snowflake_database" "primary" {
+  name         = "terraform_db"
+  is_transient = false
+  comment      = "Terraform Lab DB"
+
+  data_retention_time_in_days                   = 3
+  max_data_extension_time_in_days               = 7
+  replication {
+    enable_to_account {
+      account_identifier = "VENZZML.HG28500"
+      with_failover      = true
+    }
+    ignore_edition_check = true
+  }
+}
+resource "snowflake_schema" "schema" {
+  name                = "TF_SCH"
+  database            = "terraform_db"
+  comment             = "tf schema"
+
+  data_retention_time_in_days                   = 3
+  max_data_extension_time_in_days               = 7
 }
