@@ -1,0 +1,99 @@
+name: Terraform CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+  
+env:
+  TF_VAR_organization_name: ${{ secrets.SNOWFLAKE_ORG_NAME }} 
+  TF_VAR_account_name: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+  TF_VAR_user: ${{ secrets.SNOWFLAKE_USER }}
+  TF_VAR_private_key_path: /tmp/snowflake_key.p8
+  TF_VAR_private_key_passphrase: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4      
+    
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+      
+      - name: Write private key to file
+        run: echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}" > /tmp/snowflake_key.p8
+      
+      - name: Terraform Init
+        run: terraform init
+        
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-pr-${{ github.event.pull_request.number }}
+          path: tfplan
+          retention_days: 5
+          
+  apply:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/Checkout@v4      
+    
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+      
+      - name: Write private key to file
+        run: echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > /tmp/snowflake_key.p8
+      
+      - name: Terraform Init
+        run: terraform init
+        
+      - name: Find merged PR and it's plan run
+        id: source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            });
+            const pr = prs.find(p => p.merged_at);
+            if (!pr) core.setFailed("No merged PR found for commit " + context.sha);
+
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: ".github/workflows/github_tf.yml",
+              event: "pull_request",
+              status: "success",
+              head_sha: pr.head.sha,
+            });
+            if (runs.workflow_runs.length === 0) {
+              core.setFailed("No successful plan run found for PR #" + pr.number);
+            }
+            core.setOutput("pr_number", pr.number);
+            core.setOutput("run_id", runs.workflow_runs[0].id);
+
+      - name: Download plan artifact from PR run
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-pr-${{ steps.source.outputs.pr_number }}
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
