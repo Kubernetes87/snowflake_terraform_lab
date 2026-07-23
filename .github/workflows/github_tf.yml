@@ -30,7 +30,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
       
       - name: Write private key to file
-        run: echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}" > /tmp/snowflake_key.p8
+        run: echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > /tmp/snowflake_key.p8
       
       - name: Terraform Init
         run: terraform init
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/Checkout@v4      
+        uses: actions/checkout@v4      
     
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -72,18 +72,22 @@ jobs:
               commit_sha: context.sha,
             });
             const pr = prs.find(p => p.merged_at);
-            if (!pr) core.setFailed("No merged PR found for commit " + context.sha);
+            if (!pr) {
+              core.setFailed("No merged PR found for commit " + context.sha);
+              return;
+              }
 
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: ".github/workflows/github_tf.yml",
+              workflow_id: "github_tf.yml",
               event: "pull_request",
               status: "success",
               head_sha: pr.head.sha,
             });
             if (runs.workflow_runs.length === 0) {
               core.setFailed("No successful plan run found for PR #" + pr.number);
+              return;
             }
             core.setOutput("pr_number", pr.number);
             core.setOutput("run_id", runs.workflow_runs[0].id);
