@@ -1,5 +1,5 @@
  resource "snowflake_warehouse" "warehouse" {
-   name                                = "TERRAFORM_WH"
+   name                                = "TERRAFORM_WH_01"
    warehouse_type                      = "STANDARD"
    warehouse_size                      = "X-SMALL"
    max_cluster_count                   = 4
@@ -16,7 +16,7 @@
  
  ## Complete (with every optional set)
  resource "snowflake_database" "primary" {
-   name         = "terraform_db"
+   name         = "terraform_01_db"
    is_transient = false
    comment      = "Terraform Lab DB"
  
@@ -32,7 +32,7 @@
  }
  
  resource "snowflake_schema" "schema" {
-   name                = "TF_SCH"
+   name                = "TF_SCH_T"
    database            = "terraform_db"
    comment             = "tf schema"
  
